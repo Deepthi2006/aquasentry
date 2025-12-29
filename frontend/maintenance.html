@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance - AquaSentry Live</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="water-theme-bg min-h-screen">
+    <nav class="water-nav">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                    </svg>
+                    <span class="text-white font-bold text-xl">AquaSentry Live</span>
+                </div>
+                <div class="flex items-center gap-6">
+                    <a href="/dashboard" class="nav-link">Dashboard</a>
+                    <a href="/alerts" class="nav-link">Alerts</a>
+                    <a href="/copilot" class="nav-link">AquaCopilot</a>
+                    <a href="/vision" class="nav-link">Vision AI</a>
+                    <a href="/map" class="nav-link">Map</a>
+                    <a href="/maintenance" class="nav-link active">Maintenance</a>
+                    <button onclick="logout()" class="nav-link text-white/80 hover:text-white">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">Maintenance Scheduling</h1>
+            <p class="text-slate-500 mt-1">Track and schedule tank maintenance activities</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="water-card p-4 text-center">
+                <div class="text-3xl font-bold text-slate-800" id="total-tanks">0</div>
+                <div class="text-slate-500 text-sm">Total Tanks</div>
+            </div>
+            <div class="water-card p-4 text-center border-l-4 border-emerald-500">
+                <div class="text-3xl font-bold text-emerald-500" id="up-to-date">0</div>
+                <div class="text-slate-500 text-sm">Up to Date</div>
+            </div>
+            <div class="water-card p-4 text-center border-l-4 border-amber-500">
+                <div class="text-3xl font-bold text-amber-500" id="due-soon">0</div>
+                <div class="text-slate-500 text-sm">Due Soon</div>
+            </div>
+            <div class="water-card p-4 text-center border-l-4 border-red-500">
+                <div class="text-3xl font-bold text-red-500" id="overdue">0</div>
+                <div class="text-slate-500 text-sm">Overdue</div>
+            </div>
+        </div>
+
+        <div class="water-card overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="text-left py-4 px-6 font-semibold text-slate-700">Tank Name</th>
+                        <th class="text-left py-4 px-6 font-semibold text-slate-700">Location</th>
+                        <th class="text-left py-4 px-6 font-semibold text-slate-700">Last Cleaned</th>
+                        <th class="text-left py-4 px-6 font-semibold text-slate-700">Days Since</th>
+                        <th class="text-left py-4 px-6 font-semibold text-slate-700">Status</th>
+                        <th class="text-left py-4 px-6 font-semibold text-slate-700">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="maintenance-table" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-500">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="schedule-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h2 class="text-xl font-bold text-slate-800 mb-4">Schedule Maintenance</h2>
+            <form id="schedule-form">
+                <input type="hidden" id="modal-tank-id">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Tank</label>
+                    <input type="text" id="modal-tank-name" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50" readonly>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Cleaning Date</label>
+                    <input type="date" id="modal-date" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Notes (Optional)</label>
+                    <textarea id="modal-notes" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none" rows="3" placeholder="Any additional notes..."></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-gradient-to-r from-sky-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-sky-600 hover:to-cyan-600 transition">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { checkAuth, logout } from '/static/js/auth.js';
+        checkAuth();
+        window.logout = logout;
+
+        let allTanks = [];
+
+        function getDaysSince(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            return Math.floor(diff / (1000 * 60 * 60 * 24));
+        }
+
+        // thresholds: <=20 up-to-date, <=30 due soon, else overdue
+        function getMaintenanceStatus(days) {
+            if (days <= 20) {
+                return {
+                    status: 'up-to-date',
+                    label: 'Up to Date',
+                    color: 'text-emerald-600 bg-emerald-50'
+                };
+            }
+            if (days <= 30) {
+                return {
+                    status: 'due-soon',
+                    label: 'Due Soon',
+                    color: 'text-amber-600 bg-amber-50'
+                };
+            }
+            return {
+                status: 'overdue',
+                label: 'Overdue',
+                color: 'text-red-600 bg-red-50'
+            };
+        }
+
+        async function loadTanks() {
+            try {
+                const res = await fetch('/api/tanks');
+                const data = await res.json();
+                allTanks = data.tanks || [];
+                console.log('TANK DATA:', allTanks);
+                renderTable();
+            } catch (error) {
+                console.error('Error loading tanks:', error);
+                const tbody = document.getElementById('maintenance-table');
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-red-500">Failed to load tanks</td></tr>';
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('maintenance-table');
+            
+            let upToDate = 0;
+            let dueSoon = 0;
+            let overdue = 0;
+
+            const rows = allTanks.map(tank => {
+                const maintenance = tank.maintenance || {};
+
+                // 1) DAYS SINCE CLEANED
+                // Prefer backend field if present, fall back to maintenance.days_since_cleaned
+                let days = null;
+                if (typeof tank.days_since_cleaned === 'number') {
+                    days = tank.days_since_cleaned;
+                } else if (typeof maintenance.days_since_cleaned === 'number') {
+                    days = maintenance.days_since_cleaned;
+                }
+
+                // 2) LAST CLEANED DATE (display only)
+                let lastCleanedDisplay = 'Unknown';
+
+                if (maintenance.last_cleaned) {
+                    const d = new Date(maintenance.last_cleaned);
+                    if (!isNaN(d)) {
+                        lastCleanedDisplay = d.toLocaleDateString();
+                    }
+                } else if (days != null) {
+                    // Approximate last cleaned date from "days since"
+                    const d = new Date();
+                    d.setDate(d.getDate() - days);
+                    lastCleanedDisplay = d.toLocaleDateString();
+                }
+
+                // 3) Status based on days (if missing, treat as 999 => Overdue)
+                const effectiveDays = days != null ? days : 999;
+                const statusInfo = getMaintenanceStatus(effectiveDays);
+
+                if (statusInfo.status === 'up-to-date') upToDate++;
+                else if (statusInfo.status === 'due-soon') dueSoon++;
+                else overdue++;
+
+                // 4) Location formatting (avoid [object Object])
+                const loc = tank.location || {};
+                let locationText = 'N/A';
+
+                if (typeof loc === 'string') {
+                    locationText = loc;
+                } else if (loc.address) {
+                    locationText = loc.address;
+                } else if (loc.name) {
+                    locationText = loc.name;
+                } else {
+                    const combined = [loc.area, loc.city].filter(Boolean).join(', ');
+                    locationText = combined || 'N/A';
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-4 px-6">
+                            <div class="font-medium text-slate-800">${tank.name}</div>
+                            <div class="text-sm text-slate-500">${tank.id}</div>
+                        </td>
+                        <td class="py-4 px-6 text-slate-600">${locationText}</td>
+                        <td class="py-4 px-6 text-slate-600">${lastCleanedDisplay}</td>
+                        <td class="py-4 px-6">
+                            <span class="font-medium ${
+                                days == null
+                                    ? 'text-slate-500'
+                                    : days > 30
+                                        ? 'text-red-600'
+                                        : days > 20
+                                            ? 'text-amber-600'
+                                            : 'text-slate-800'
+                            }">
+                                ${days == null ? '?' : days} days
+                            </span>
+                        </td>
+                        <td class="py-4 px-6">
+                            <span class="px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}">
+                                ${statusInfo.label}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6">
+                            <button onclick="openModal('${tank.id}', '${tank.name}')" class="text-sky-600 hover:text-sky-800 font-medium text-sm">
+                                Schedule
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = rows || '<tr><td colspan="6" class="py-8 text-center text-slate-500">No tanks found</td></tr>';
+
+            document.getElementById('total-tanks').textContent = allTanks.length;
+            document.getElementById('up-to-date').textContent = upToDate;
+            document.getElementById('due-soon').textContent = dueSoon;
+            document.getElementById('overdue').textContent = overdue;
+        }
+
+        // modal helpers must be on window because script is a module
+        window.openModal = function(tankId, tankName) {
+            document.getElementById('modal-tank-id').value = tankId;
+            document.getElementById('modal-tank-name').value = tankName;
+            document.getElementById('modal-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('modal-notes').value = '';
+            document.getElementById('schedule-modal').classList.remove('hidden');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('schedule-modal').classList.add('hidden');
+        };
+
+        document.getElementById('schedule-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const tankId = document.getElementById('modal-tank-id').value;
+            const cleanedDate = document.getElementById('modal-date').value;
+            const notes = document.getElementById('modal-notes').value;
+
+            try {
+                const res = await fetch('/api/maintenance/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tank_id: tankId, cleaned_date: cleanedDate, notes })
+                });
+
+                if (res.ok) {
+                    closeModal();
+                    loadTanks();
+                } else {
+                    alert('Failed to update maintenance');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating maintenance');
+            }
+        });
+
+        loadTanks();
+    </script>
+</body>
+</html>

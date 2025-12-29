@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "id": "user-001",
+      "username": "admin",
+      "password": "admin123",
+      "name": "System Administrator",
+      "role": "admin",
+      "email": "admin@aquasentry.com"
+    },
+    {
+      "id": "user-002",
+      "username": "operator",
+      "password": "operator123",
+      "name": "Tank Operator",
+      "role": "operator",
+      "email": "operator@aquasentry.com"
+    },
+    {
+      "id": "user-003",
+      "username": "viewer",
+      "password": "viewer123",
+      "name": "Guest Viewer",
+      "role": "viewer",
+      "email": "viewer@aquasentry.com"
+    }
+  ]
+}

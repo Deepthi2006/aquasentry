@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tank Map - AquaSentry Live</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        #map { height: 600px; width: 100%; border-radius: 0.75rem; }
+        .leaflet-popup-content-wrapper {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .leaflet-popup-content { margin: 16px; }
+    </style>
+</head>
+<body class="water-theme-bg min-h-screen">
+    <nav class="water-nav">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                    </svg>
+                    <span class="text-white font-bold text-xl">AquaSentry Live</span>
+                </div>
+                <div class="flex items-center gap-6">
+                    <a href="/dashboard" class="nav-link">Dashboard</a>
+                    <a href="/alerts" class="nav-link">Alerts</a>
+                    <a href="/copilot" class="nav-link">AquaCopilot</a>
+                    <a href="/vision" class="nav-link">Vision AI</a>
+                    <a href="/map" class="nav-link active">Map</a>
+                    <a href="/maintenance" class="nav-link">Maintenance</a>
+                    <button onclick="logout()" class="nav-link text-white/80 hover:text-white">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">Tank Locations</h1>
+            <p class="text-slate-500 mt-1">Interactive map of all monitoring stations</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-1 space-y-4">
+                <div class="water-card p-4">
+                    <h3 class="font-semibold text-slate-800 mb-3">Legend</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-emerald-500"></span>
+                            <span class="text-slate-600">Normal Status</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-amber-500"></span>
+                            <span class="text-slate-600">Warning</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-red-500"></span>
+                            <span class="text-slate-600">Critical</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="water-card p-4">
+                    <h3 class="font-semibold text-slate-800 mb-3">Quick Stats</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">Total Tanks</span>
+                            <span id="stat-total" class="font-semibold text-slate-800">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">Normal</span>
+                            <span id="stat-normal" class="font-semibold text-emerald-600">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">Warning</span>
+                            <span id="stat-warning" class="font-semibold text-amber-600">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">Critical</span>
+                            <span id="stat-critical" class="font-semibold text-red-600">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="water-card p-4">
+                    <h3 class="font-semibold text-slate-800 mb-3">Filter</h3>
+                    <select id="status-filter" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
+                        <option value="all">All Tanks</option>
+                        <option value="normal">Normal Only</option>
+                        <option value="warning">Warning Only</option>
+                        <option value="critical">Critical Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3">
+                <div class="water-card p-4">
+                    <div id="map" class="border-2 border-sky-200"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module">
+        import { checkAuth, logout } from '/static/js/auth.js';
+        checkAuth();
+        window.logout = logout;
+
+        let map;
+        let markers = [];
+        let allMarkerData = [];
+
+        function createMarkerIcon(status) {
+            const color =
+                status === 'normal' ? '#10B981'
+              : status === 'warning' ? '#F59E0B'
+              : '#EF4444';
+
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="width: 24px; height: 24px; background: ${color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+        }
+
+        // marker here matches Python map_service structure:
+        // { id, name, lat, lng, address, status, popup_content: {...} }
+        function createPopupContent(marker) {
+            const info = marker.popup_content || {};
+            return `
+                <div class="min-w-[220px]">
+                    <h3 class="font-bold text-lg text-slate-800 mb-1">${marker.name}</h3>
+                    <div class="text-sm text-slate-600 mb-2">${marker.address || 'Location unavailable'}</div>
+                    <div class="space-y-1 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Water Level:</span>
+                            <span class="font-medium">${info.level ?? 'N/A'}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">pH:</span>
+                            <span class="font-medium">${info.ph ?? 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Turbidity:</span>
+                            <span class="font-medium">${info.turbidity ?? 'N/A'} NTU</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Temperature:</span>
+                            <span class="font-medium">${info.temperature ?? 'N/A'}°C</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Days since cleaned:</span>
+                            <span class="font-medium">${info.days_since_cleaned ?? 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Days until maintenance:</span>
+                            <span class="font-medium">${info.days_until_maintenance ?? 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-slate-500">Status:</span>
+                            <span class="font-medium ${
+                                marker.status === 'normal'
+                                    ? 'text-emerald-600'
+                                    : marker.status === 'warning'
+                                        ? 'text-amber-600'
+                                        : 'text-red-600'
+                            }">
+                                ${marker.status.toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                    <a href="/dashboard?tank=${marker.id}" class="block mt-3 text-center text-sky-600 hover:text-sky-800 font-medium text-sm">
+                        View Details →
+                    </a>
+                </div>
+            `;
+        }
+
+        function clearMarkers() {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+        }
+
+        function renderMarkers(filter = 'all') {
+            clearMarkers();
+
+            const filtered =
+                filter === 'all'
+                    ? allMarkerData
+                    : allMarkerData.filter(m => m.status === filter);
+
+            filtered.forEach(markerData => {
+                if (
+                    typeof markerData.lat !== 'number' ||
+                    typeof markerData.lng !== 'number'
+                ) {
+                    return; // skip invalid coords
+                }
+
+                const marker = L.marker(
+                    [markerData.lat, markerData.lng],
+                    { icon: createMarkerIcon(markerData.status) }
+                ).bindPopup(createPopupContent(markerData));
+
+                marker.addTo(map);
+                markers.push(marker);
+            });
+        }
+
+        async function loadMapData() {
+            try {
+                const res = await fetch('/api/map');
+                const data = await res.json();
+
+                // backend: { markers: [...], bounds: { center, zoom, bounds: {north,south,east,west} } }
+                allMarkerData = data.markers || [];
+
+                const boundsObj = data.bounds && data.bounds.bounds;
+                if (boundsObj) {
+                    map.fitBounds(
+                        [
+                            [boundsObj.south, boundsObj.west],
+                            [boundsObj.north, boundsObj.east]
+                        ],
+                        { padding: [50, 50] }
+                    );
+                } else if (data.bounds && data.bounds.center) {
+                    const c = data.bounds.center;
+                    map.setView([c.lat, c.lng], data.bounds.zoom || 12);
+                }
+
+                const normal = allMarkerData.filter(m => m.status === 'normal').length;
+                const warning = allMarkerData.filter(m => m.status === 'warning').length;
+                const critical = allMarkerData.filter(m => m.status === 'critical').length;
+
+                document.getElementById('stat-total').textContent = allMarkerData.length;
+                document.getElementById('stat-normal').textContent = normal;
+                document.getElementById('stat-warning').textContent = warning;
+                document.getElementById('stat-critical').textContent = critical;
+
+                renderMarkers();
+            } catch (error) {
+                console.error('Error loading map data:', error);
+            }
+        }
+
+        // basic initial center; real center comes from /api/map
+        map = L.map('map').setView([40.7128, -74.0060], 11);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors © CARTO',
+            maxZoom: 19
+        }).addTo(map);
+
+        document.getElementById('status-filter').addEventListener('change', (e) => {
+            renderMarkers(e.target.value);
+        });
+
+        loadMapData();
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+I have an existing project called AquaSentry Live (Repl-AI). It already contains:
+- A working backend (FastAPI-like) inside /backend
+- Services like tank_service, map_service, maintenance_service
+- Frontend pages: dashboard.html, map.html, alerts.html, maintenance.html, recommendations.html
+- A working map using Leaflet
+- Maintenance scheduling system
+- Tank alerts, recommendations, and authentication
+- Static tank data with fields like pH, turbidity, temperature, level, days_since_cleaned, etc.
+
+I want you to ADD NEW FEATURES to this EXISTING project, without breaking any current functionality or UI.
+
+INSTRUCTIONS:
+1. DO NOT rewrite existing code.
+2. ONLY extend the project with new AI + Govt-impact features.
+3. Use Gemini API for AI features (Vision, Text, Prediction).
+4. Follow the folder structure exactly.
+5. Create new routes in /backend/main.py or services folder only.
+6. Add new JS modules in /frontend/js only.
+7. Add minimal UI components inside existing pages – do NOT redesign entire UI.
+
+ADD THE FOLLOWING 10 FEATURES EXACTLY:
+
+1. AI Water Quality Prediction (24–48 hr forecasting) using Gemini.
+2. AI Leakage/Overflow Detection using anomaly detection + Gemini.
+3. AI Predictive Maintenance Scheduler with recommended cleaning date.
+4. AquaCopilot: An AI chatbot using Gemini for officer queries.
+5. Vision AI Water Contamination Detection (image upload → analysis).
+6. GIS Ward-Level Heatmaps (GeoJSON layer support).
+7. Rainwater Harvesting & Overflow Utilization Predictor.
+8. Water Demand Forecasting (LSTM or Gemini-based).
+9. Explainable AI Alerts (show cause + recommended action).
+10. Offline-first PWA mode for rural deployment.
+
+For each feature, generate:
+- Required Python backend code (FastAPI endpoints)
+- Required service functions (AI logic using Gemini)
+- Required frontend HTML/JS additions
+- Minimal CSS if needed
+- API contract: input/output schema
+- Integration instructions for existing pages
+
+Also generate:
+- A new API route summary table
+- Updated architecture diagram (ASCII)
+- A short explanation of how each feature helps Indian Government use cases
+
+Ensure all code is 100% compatible with the existing Repl-AI zip structure.
+
+Output everything as perfectly copy-paste ready.
